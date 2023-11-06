@@ -299,3 +299,146 @@ svm_output <- tibble(id = test$id, type = svm_preds$.pred_class)
 
 
 vroom_write(svm_output, "GGG_SVMPreds.csv", delim = ",")
+
+
+
+### boosting
+
+
+boost_recipe <- recipe(type~., data=train) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_dummy(all_nominal_predictors())
+
+
+
+
+boost_mod <- boost_tree(trees= 2000, tree_depth = 4,
+                        learn_rate = .000562) %>% # set or tune
+  set_mode("classification") %>%
+  set_engine("xgboost")
+
+
+boost_wf <- 
+  workflow() %>%
+  add_recipe(boost_recipe) %>%
+  add_model(boost_mod)
+
+## set up a tuning grid
+tuning_grid <-
+  grid_regular(trees(),
+               tree_depth(),
+               learn_rate(),
+               levels = 5)
+
+## split into folds
+folds <- vfold_cv(train, v = 5, repeats = 1)
+
+# run cv
+
+CV_results <-
+  boost_wf %>%
+  tune_grid(resamples = folds,
+            grid = tuning_grid,
+            metrics = metric_set(accuracy))
+
+# find best tuning parm values
+
+best_tune <-
+  CV_results %>%
+  select_best("accuracy")
+
+# finalize wf and get preds
+
+final_wf <-
+  boost_wf %>%
+  #finalize_workflow(best_tune) %>%
+  fit(data = train)
+
+boost_preds <-
+  final_wf %>%
+  predict(new_data = test, type = "class")
+
+# prepare and export preds to csv for kaggle
+
+boost_output <- tibble(id = test$id, type = boost_preds$.pred_class)
+
+
+vroom_write(boost_output, "GGG_BoostPreds.csv", delim = ",")
+
+
+
+### NEURAL NETWORK
+
+nn_recipe <- recipe(type~., data = train) %>%
+update_role(id, new_role="id") %>%
+step_mutate(color = as.factor(color)) %>% ## Turn color to factor then dummy encode color
+step_dummy(color) %>%
+ step_range(all_numeric_predictors(), min=0, max=1) #scale to [0,1]
+
+nn_model <- mlp(hidden_units = tune(),
+                epochs = 50) %>%
+set_engine("nnet") %>% #verbose = 0 prints off less
+set_mode("classification")
+
+nn_wf <- 
+  workflow() %>%
+  add_model(nn_model) %>%
+  add_recipe(nn_recipe)
+
+
+nn_tuning_grid <- grid_regular(hidden_units(range=c(1, 30)),
+                            levels=30)
+
+
+## split into folds
+folds <- vfold_cv(train, v = 5, repeats = 1)
+
+# run cv
+
+CV_results <-
+  nn_wf %>%
+  tune_grid(resamples = folds,
+            grid = nn_tuning_grid,
+            metrics = metric_set(accuracy))
+
+# find best tuning parm values
+
+best_tune <-
+  CV_results %>%
+  select_best("accuracy")
+
+
+
+# finalize wf and get preds
+
+final_wf <-
+  nn_wf %>%
+  finalize_workflow(best_tune) %>%
+  fit(data = train)
+
+nn_preds <-
+  final_wf %>%
+  predict(new_data = test, type = "class")
+
+# prepare and export preds to csv for kaggle
+
+nn_output <- tibble(id = test$id, type = nn_preds$.pred_class)
+
+
+vroom_write(nn_output, "GGG_NNPreds.csv", delim = ",")
+
+## view graphic output
+
+tuned_nn <-
+  nn_wf %>%
+  tune_grid(resamples = folds,
+            grid = nn_tuning_grid,
+            metrics = metric_set(accuracy))
+
+tuned_nn %>% collect_metrics() %>%
+filter(.metric=="accuracy") %>%
+ggplot(aes(x=hidden_units, y=mean)) + geom_line()
+
+
+# x axis - hidden units
+# y axis - accuracy (mean)
