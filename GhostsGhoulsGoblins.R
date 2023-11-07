@@ -84,8 +84,8 @@ rf_wf <-
 ## set up a tuning grid
 tuning_grid <-
   grid_regular(mtry(range = c(1,6)),
-               min_n(),
-               levels = 6)
+               min_n(range(1,30)),
+               levels = 10)
 
 ## split into folds
 folds <- vfold_cv(train, v = 5, repeats = 1)
@@ -244,12 +244,13 @@ vroom_write(nb_output, "GGG_NBPreds.csv", delim = ",")
 
 
 svm_recipe <- recipe(type~., data=train) %>%
-   step_normalize(all_numeric_predictors())
+   step_normalize(all_numeric_predictors()) %>%
+  step_dummy(all_nominal_predictors())
 
 
 
 
-svmRadial <- svm_rbf(rbf_sigma=tune(), cost=tune()) %>% # set or tune
+svmRadial <- svm_rbf(rbf_sigma=tune(), cost = tune()) %>% # set or tune
   set_mode("classification") %>%
   set_engine("kernlab")
 
@@ -263,7 +264,7 @@ svm_wf <-
 tuning_grid <-
   grid_regular(rbf_sigma(),
                cost(),
-               levels = 20)
+               levels = 10)
 
 ## split into folds
 folds <- vfold_cv(train, v = 5, repeats = 1)
@@ -303,8 +304,8 @@ vroom_write(svm_output, "GGG_SVMPreds.csv", delim = ",")
 
 
 ### boosting
-
-
+library(lightgbm)
+library(bonsai)
 boost_recipe <- recipe(type~., data=train) %>%
   step_normalize(all_numeric_predictors()) %>%
   step_dummy(all_nominal_predictors())
@@ -312,10 +313,10 @@ boost_recipe <- recipe(type~., data=train) %>%
 
 
 
-boost_mod <- boost_tree(trees= 2000, tree_depth = 4,
-                        learn_rate = .000562) %>% # set or tune
+boost_mod <- boost_tree(trees= 500, tree_depth = 2,
+                        learn_rate = .1) %>% # set or tune
   set_mode("classification") %>%
-  set_engine("xgboost")
+  set_engine("lightgbm")
 
 
 boost_wf <- 
@@ -328,10 +329,10 @@ tuning_grid <-
   grid_regular(trees(),
                tree_depth(),
                learn_rate(),
-               levels = 5)
+               levels = 7)
 
 ## split into folds
-folds <- vfold_cv(train, v = 5, repeats = 1)
+folds <- vfold_cv(train, v = 4, repeats = 1)
 
 # run cv
 
@@ -351,7 +352,7 @@ best_tune <-
 
 final_wf <-
   boost_wf %>%
-  #finalize_workflow(best_tune) %>%
+ # finalize_workflow(best_tune) %>%
   fit(data = train)
 
 boost_preds <-
@@ -375,8 +376,8 @@ step_mutate(color = as.factor(color)) %>% ## Turn color to factor then dummy enc
 step_dummy(color) %>%
  step_range(all_numeric_predictors(), min=0, max=1) #scale to [0,1]
 
-nn_model <- mlp(hidden_units = tune(),
-                epochs = 50) %>%
+nn_model <- mlp(hidden_units = 3,
+                epochs = 250) %>%
 set_engine("nnet") %>% #verbose = 0 prints off less
 set_mode("classification")
 
@@ -386,8 +387,9 @@ nn_wf <-
   add_recipe(nn_recipe)
 
 
-nn_tuning_grid <- grid_regular(hidden_units(range=c(1, 30)),
-                            levels=30)
+nn_tuning_grid <- grid_regular(hidden_units(range=c(1, 60)),
+                            levels=60)
+
 
 
 ## split into folds
@@ -413,7 +415,7 @@ best_tune <-
 
 final_wf <-
   nn_wf %>%
-  finalize_workflow(best_tune) %>%
+  #finalize_workflow(best_tune) %>%
   fit(data = train)
 
 nn_preds <-
@@ -442,3 +444,235 @@ ggplot(aes(x=hidden_units, y=mean)) + geom_line()
 
 # x axis - hidden units
 # y axis - accuracy (mean)
+
+
+#### BART
+
+
+
+bart_recipe <- recipe(type~., data=train) %>%
+  step_normalize(all_numeric_predictors())
+
+
+
+
+bart_mod <- bart(trees = tune()) %>% # set or tune
+  set_mode("classification") %>%
+  set_engine("dbarts")
+
+
+bart_wf <- 
+  workflow() %>%
+  add_recipe(bart_recipe) %>%
+  add_model(bart_mod)
+
+## set up a tuning grid
+tuning_grid <-
+  grid_regular(trees(range = c(5,25)),
+               levels = 5)
+
+## split into folds
+folds <- vfold_cv(train, v = 5, repeats = 1)
+
+# run cv
+
+CV_results <-
+  bart_wf %>%
+  tune_grid(resamples = folds,
+            grid = tuning_grid,
+            metrics = metric_set(accuracy))
+
+# find best tuning parm values
+
+best_tune <-
+  CV_results %>%
+  select_best("accuracy")
+
+# finalize wf and get preds
+
+final_wf <-
+  bart_wf %>%
+  finalize_workflow(best_tune) %>%
+  fit(data = train)
+
+bart_preds <-
+  final_wf %>%
+  predict(new_data = test, type = "class")
+
+# prepare and export preds to csv for kaggle
+
+bart_output <- tibble(id = test$id, type = bart_preds$.pred_class)
+
+
+vroom_write(bart_output, "GGG_BartPreds.csv", delim = ",")
+
+### AUTO ML
+
+
+
+library(agua)
+library(h2o)
+
+h2o.init()
+
+
+auto_recipe <- recipe(type~., data = train)
+
+
+
+auto_mod <-
+  auto_ml(mode = "classification", engine = "h2o")
+
+
+auto_wf <-
+  workflow() %>%
+  add_recipe(auto_recipe) %>%
+  add_model(auto_mod)
+
+auto_final_wf <-
+  auto_wf %>%
+  fit(data = train)
+
+
+
+auto_preds <-
+  auto_final_wf %>%
+  predict(new_data = test, type = "class")
+
+# prepare and export preds to csv for kaggle
+
+auto_output <- tibble(id = test$id, type = auto_preds$.pred_class)
+
+
+vroom_write(auto_output, "GGG_AutoML_Preds.csv", delim = ",")
+
+
+### bagged nnet
+library(parsnip)
+library(baguette)
+nn_recipe <- recipe(type~., data = train) %>%
+  update_role(id, new_role="id") %>%
+  step_mutate(color = as.factor(color)) %>% ## Turn color to factor then dummy encode color
+  step_dummy(color) %>%
+  step_range(all_numeric_predictors(), min=0, max=1) #scale to [0,1]
+
+nn_model <- mlp(hidden_units = tune(),
+                epochs = tune()) %>%
+  set_engine("nnet") %>% #verbose = 0 prints off less
+  set_mode("classification")
+
+
+nn_wf <- 
+  workflow() %>%
+  add_model(nn_model) %>%
+  add_recipe(nn_recipe)
+
+
+nn_tuning_grid <- grid_regular(hidden_units(range=c(1, 10)),
+                               epochs(),
+                               levels = 10)
+
+
+
+## split into folds
+folds <- vfold_cv(train, v = 5, repeats = 1)
+
+# run cv
+
+CV_results <-
+  nn_wf %>%
+  tune_grid(resamples = folds,
+            grid = nn_tuning_grid,
+            metrics = metric_set(accuracy))
+
+# find best tuning parm values
+
+best_tune <-
+  CV_results %>%
+  select_best("accuracy")
+
+
+
+# finalize wf and get preds
+
+final_wf <-
+  nn_wf %>%
+  finalize_workflow(best_tune) %>%
+  fit(data = train)
+
+
+nn_preds <-
+  final_wf %>%
+  predict(new_data = test, type = "class")
+
+
+# prepare and export preds to csv for kaggle
+
+nn_output <- tibble(id = test$id, type = nn_preds$.pred_class)
+
+
+vroom_write(nn_output, "GGG_NNPreds.csv", delim = ",")
+
+## multinomial regression
+
+mn_recipe <- recipe(type~., data = train) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_pca(all_predictors(), threshold = .99)
+
+mn_model <- multinom_reg(penalty = tune(),
+                mixture = tune()) %>%
+  set_engine('glmnet')
+
+
+mn_wf <- 
+  workflow() %>%
+  add_model(mn_model) %>%
+  add_recipe(mn_recipe)
+
+
+mn_tuning_grid <- grid_regular(penalty(),
+                               mixture(),
+                               levels = 15)
+
+
+
+## split into folds
+folds <- vfold_cv(train, v = 5, repeats = 1)
+
+# run cv
+
+CV_results <-
+  mn_wf %>%
+  tune_grid(resamples = folds,
+            grid = mn_tuning_grid,
+            metrics = metric_set(accuracy))
+
+# find best tuning parm values
+
+best_tune <-
+  CV_results %>%
+  select_best("accuracy")
+
+
+
+# finalize wf and get preds
+
+final_wf <-
+  mn_wf %>%
+  finalize_workflow(best_tune) %>%
+  fit(data = train)
+
+
+
+mn_preds <-
+  final_wf %>%
+  predict(new_data = test, type = "class")
+
+
+# prepare and export preds to csv for kaggle
+
+mn_output <- tibble(id = test$id, type = mn_preds$.pred_class)
+
+
+vroom_write(mn_output, "GGG_MN_REG_Preds.csv", delim = ",")
+

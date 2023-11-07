@@ -8,10 +8,10 @@ id,type
 15,Ghoul
 16,Ghoul
 17,Goblin
-18,Ghoul
+18,Goblin
 20,Ghost
 21,Ghoul
-24,Goblin
+24,Ghoul
 26,Ghost
 33,Ghoul
 38,Ghost
@@ -64,7 +64,7 @@ id,type
 120,Ghost
 121,Goblin
 122,Ghoul
-123,Goblin
+123,Ghoul
 124,Ghoul
 126,Ghoul
 127,Ghost
@@ -111,7 +111,7 @@ id,type
 200,Ghoul
 201,Ghost
 202,Goblin
-203,Ghost
+203,Goblin
 207,Goblin
 209,Ghoul
 210,Ghost
@@ -133,7 +133,7 @@ id,type
 238,Goblin
 239,Goblin
 240,Ghoul
-241,Goblin
+241,Ghost
 242,Goblin
 243,Ghoul
 244,Goblin
@@ -186,7 +186,7 @@ id,type
 319,Ghost
 320,Goblin
 322,Goblin
-326,Ghoul
+326,Goblin
 328,Ghoul
 330,Ghost
 331,Ghost
@@ -252,8 +252,8 @@ id,type
 426,Ghost
 430,Ghost
 431,Ghost
-432,Ghoul
-433,Ghoul
+432,Goblin
+433,Goblin
 436,Goblin
 437,Ghost
 438,Ghoul
@@ -267,8 +267,8 @@ id,type
 446,Ghoul
 449,Ghoul
 451,Ghoul
-452,Goblin
-453,Ghost
+452,Ghost
+453,Goblin
 455,Ghoul
 456,Goblin
 457,Ghost
@@ -314,7 +314,7 @@ id,type
 525,Goblin
 526,Ghost
 527,Ghost
-529,Ghoul
+529,Goblin
 530,Goblin
 531,Ghost
 532,Ghost
@@ -343,7 +343,7 @@ id,type
 572,Goblin
 573,Goblin
 576,Goblin
-577,Ghost
+577,Goblin
 578,Goblin
 587,Ghost
 588,Goblin
@@ -389,7 +389,7 @@ id,type
 655,Ghost
 656,Goblin
 657,Ghost
-658,Goblin
+658,Ghoul
 659,Ghoul
 660,Ghost
 665,Ghost
@@ -417,7 +417,7 @@ id,type
 711,Ghost
 712,Goblin
 713,Ghoul
-717,Ghoul
+717,Goblin
 718,Ghost
 720,Ghost
 723,Ghoul
@@ -430,8 +430,8 @@ id,type
 740,Ghoul
 742,Ghost
 744,Goblin
-748,Ghoul
-749,Goblin
+748,Ghost
+749,Ghoul
 752,Goblin
 755,Goblin
 757,Ghoul
@@ -440,7 +440,7 @@ id,type
 760,Goblin
 762,Ghost
 763,Ghoul
-764,Ghoul
+764,Goblin
 765,Ghost
 767,Ghost
 768,Ghost
@@ -448,7 +448,7 @@ id,type
 770,Ghost
 771,Goblin
 773,Goblin
-774,Ghoul
+774,Goblin
 776,Ghoul
 778,Ghoul
 780,Goblin
@@ -482,7 +482,7 @@ id,type
 823,Goblin
 824,Ghoul
 825,Ghost
-826,Ghoul
+826,Goblin
 828,Ghost
 830,Goblin
 832,Ghost
@@ -504,7 +504,7 @@ id,type
 862,Ghost
 863,Goblin
 865,Ghoul
-866,Ghost
+866,Goblin
 868,Ghoul
 869,Ghost
 870,Ghoul
@@ -520,7 +520,7 @@ id,type
 884,Goblin
 885,Ghost
 887,Ghoul
-888,Ghoul
+888,Goblin
 891,Ghoul
 892,Ghoul
 893,Goblin
