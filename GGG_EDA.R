@@ -12,8 +12,7 @@ test <- vroom("test.csv")
 
 
 
-library(lightgbm)
-library(bonsai)
+
 boost_recipe <- recipe(type~., data=train) %>%
   step_normalize(all_numeric_predictors()) %>%
   step_dummy(all_nominal_predictors())
@@ -24,7 +23,7 @@ boost_recipe <- recipe(type~., data=train) %>%
 boost_mod <- boost_tree(trees= tune(), tree_depth = tune(),
                         learn_rate = tune()) %>% # set or tune
   set_mode("classification") %>%
-  set_engine("lightgbm")
+  set_engine("xgboost")
 
 
 boost_wf <- 
