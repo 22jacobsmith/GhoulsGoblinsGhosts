@@ -83,9 +83,10 @@ rf_wf <-
 
 
 
+
 ## set up a tuning grid
 tuning_grid <-
-  grid_regular(mtry(range = c(1,6)),
+  grid_regular(mtry(range = c(1,5)),
                min_n(range(1,30)),
                levels = 10)
 
@@ -120,6 +121,7 @@ rf_preds <-
 # prepare and export preds to csv for kaggle
 
 rf_output <- tibble(id = test$id, type = rf_preds$.pred_class)
+
 
 vroom_write(rf_output, "GGG_RFPreds.csv", delim = ",")
 
@@ -315,10 +317,11 @@ boost_recipe <- recipe(type~., data=train) %>%
 
 
 
-boost_mod <- boost_tree(trees= tune(), tree_depth = tune(),
-                        learn_rate = tune()) %>% # set or tune
+boost_mod <- boost_tree(trees= 500, tree_depth = 1,
+                        learn_rate = .001) %>% # set or tune
   set_mode("classification") %>%
   set_engine("lightgbm")
+
 
 
 boost_wf <- 
@@ -331,10 +334,10 @@ tuning_grid <-
   grid_regular(trees(),
                tree_depth(),
                learn_rate(),
-               levels = 8)
+               levels = 2)
 
 ## split into folds
-folds <- vfold_cv(train, v = 5, repeats = 1)
+folds <- vfold_cv(train, v = 4, repeats = 1)
 
 # run cv
 
@@ -354,7 +357,7 @@ best_tune <-
 
 final_wf <-
   boost_wf %>%
-  finalize_workflow(best_tune) %>%
+  #finalize_workflow(best_tune) %>%
   fit(data = train)
 
 boost_preds <-
@@ -470,8 +473,8 @@ bart_wf <-
 
 ## set up a tuning grid
 tuning_grid <-
-  grid_regular(trees(range = c(5,25)),
-               levels = 5)
+  grid_regular(trees(),
+               levels = 7)
 
 ## split into folds
 folds <- vfold_cv(train, v = 5, repeats = 1)
