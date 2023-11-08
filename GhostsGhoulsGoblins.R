@@ -67,7 +67,9 @@ rmse_vec(train[is.na(imputed_set)], baked[is.na(imputed_set)])
 
 rf_recipe <-
   recipe(type~., data=train) %>%
-  step_normalize(all_numeric_predictors())
+  step_normalize(all_numeric_predictors()) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_pca(all_predictors(), threshold = .8)
 
 rf_mod <- rand_forest(min_n = tune(), mtry = tune()) %>%
   set_engine('ranger') %>%
@@ -313,8 +315,8 @@ boost_recipe <- recipe(type~., data=train) %>%
 
 
 
-boost_mod <- boost_tree(trees= 500, tree_depth = 2,
-                        learn_rate = .1) %>% # set or tune
+boost_mod <- boost_tree(trees= tune(), tree_depth = tune(),
+                        learn_rate = tune()) %>% # set or tune
   set_mode("classification") %>%
   set_engine("lightgbm")
 
@@ -329,10 +331,10 @@ tuning_grid <-
   grid_regular(trees(),
                tree_depth(),
                learn_rate(),
-               levels = 7)
+               levels = 8)
 
 ## split into folds
-folds <- vfold_cv(train, v = 4, repeats = 1)
+folds <- vfold_cv(train, v = 5, repeats = 1)
 
 # run cv
 
@@ -352,7 +354,7 @@ best_tune <-
 
 final_wf <-
   boost_wf %>%
- # finalize_workflow(best_tune) %>%
+  finalize_workflow(best_tune) %>%
   fit(data = train)
 
 boost_preds <-
@@ -617,7 +619,8 @@ vroom_write(nn_output, "GGG_NNPreds.csv", delim = ",")
 
 mn_recipe <- recipe(type~., data = train) %>%
   step_normalize(all_numeric_predictors()) %>%
-  step_pca(all_predictors(), threshold = .99)
+  #step_poly(all_numeric_predictors(), degree = 2) %>%
+  step_dummy(all_nominal_predictors())
 
 mn_model <- multinom_reg(penalty = tune(),
                 mixture = tune()) %>%
@@ -632,7 +635,7 @@ mn_wf <-
 
 mn_tuning_grid <- grid_regular(penalty(),
                                mixture(),
-                               levels = 15)
+                               levels = 20)
 
 
 
